@@ -22,6 +22,7 @@ var signalChart		= function(options) {
 	this.data			= {
 		data:	{}
 	};
+	this.importedAssets = [];
 	
 	this.data.pixels	= new Uint32Array(this.options.width*this.options.height);
 	
@@ -103,6 +104,20 @@ var signalChart		= function(options) {
 			g:	72,
 			b:	42,
 			a:	255
+		},
+		progress:	{
+			bg:	{
+				r:	89,
+				g:	89,
+				b:	93,
+				a:	255
+			},
+			fg:	{
+				r:	205,
+				g:	205,
+				b:	206,
+				a:	255
+			}
 		}
 	};
 	
@@ -135,6 +150,14 @@ signalChart.prototype.init = function() {
 	// Render the background
 	this.rect(0,0,this.options.width,this.options.height,this.color.background);
 	
+	
+	/*
+		                    _                            _   _               _     
+		 _ __ ___ _ __   __| | ___ _ __   _ __ ___   ___| |_| |__   ___   __| |___ 
+		| '__/ _ \ '_ \ / _` |/ _ \ '__| | '_ ` _ \ / _ \ __| '_ \ / _ \ / _` / __|
+		| | |  __/ | | | (_| |  __/ |    | | | | | |  __/ |_| | | | (_) | (_| \__ \
+		|_|  \___|_| |_|\__,_|\___|_|    |_| |_| |_|\___|\__|_| |_|\___/ \__,_|___/
+	*/
 	this.render = {
 		candles:	 {
 			regular: function(name) {
@@ -186,8 +209,11 @@ signalChart.prototype.init = function() {
 				scope.lines(lineCoordinates, scope.color.transform);
 			}
 		},
-		asset:	function(name, position, callback) {
-			scope.importAsset(name, position.x, position.y, callback);
+		asset:	function(name, position, options) {
+			scope.importedAssets.push({
+				name:		name,
+				position:	position
+			});
 		},
 		geometry:	{
 			line:	function(pos1, pos2, color) {
@@ -195,57 +221,19 @@ signalChart.prototype.init = function() {
 			}
 		}
 	};
-	
-	signalChart.prototype.location = function(name) {
-		var scope	= this;
-		var data	= this.getData(name);
-		return {
-			position:	function(pos, v) {
-				return {
-					x:	(scope.options.candleWidth*pos+scope.options.candleWidth/2)^0,
-					y:	scope.valueToY(data[pos][v])
-				};
-			}
-		}
-	}
-	
-	signalChart.prototype.importAsset = function(name, x, y, callback) {
-		var scope = this;
-		scope.assets.load(name, function(png) {
-			var i,j, indexAsset, indexDest, xx, yy;
-			for (j=0;j<png.asset.h;j++) {
-				for (i=0;i<png.asset.w;i++) {
-					xx								= x+i-png.asset.x;
-					yy								= y+j-png.asset.y;
-					if (xx<0||xx>scope.options.width||yy<0||yy>scope.options.height) {continue;}
-					indexDest						= scope.index(xx, yy, scope.options.width);
-					indexAsset						= scope.index(i, png.asset.h-j, png.asset.w);
-					scope.setPixel(xx, yy, scope.rgba_decode(png.pixels[indexAsset]));
-				}
-			}
-			callback();
-		});
-	}
-	
+	/*
+		                    _         _ _ _                          
+		  __ _ ___ ___  ___| |_ ___  | (_) |__  _ __ __ _ _ __ _   _ 
+		 / _` / __/ __|/ _ \ __/ __| | | | '_ \| '__/ _` | '__| | | |
+		| (_| \__ \__ \  __/ |_\__ \ | | | |_) | | | (_| | |  | |_| |
+		 \__,_|___/___/\___|\__|___/ |_|_|_.__/|_|  \__,_|_|   \__, |
+		                                                       |___/ 
+	*/
 	this.assets = new (function(){
 		
 		this.assetsDirectory = path.normalize(__dirname+'/assets/');
 		
 		this.assets = {
-			/*sell:	{
-				filename:	path.normalize(this.assetsDirectory+'forecast/sell.png'),
-				x:			0,
-				y:			38,
-				w:			108,
-				h:			38
-			},
-			buy:	{
-				filename:	path.normalize(this.assetsDirectory+'forecast/buy.png'),
-				x:			0,
-				y:			38,
-				w:			108,
-				h:			38
-			},*/
 			stats:	{
 				filename:	path.normalize(this.assetsDirectory+'forecast/stats.png'),
 				x:			0,
@@ -379,37 +367,259 @@ signalChart.prototype.init = function() {
 			});
 		}
 	})();
-}
-
-
-signalChart.prototype.toPNG = function(filename, callback) {
 	
-	var image = new PNG({
-		width:	this.options.width,
-		height:	this.options.height
-	});
 	
-	// Now we convert the data
-	var x,y,idx,idxpix;
-	for (y = 0; y < this.options.height; y++) {
-		for (x = 0; x < this.options.width; x++) {
-			idx					= (this.options.width * (this.options.height-1-y) + x) << 2;
-			idxpix				= this.index(x,y);
-			color				= this.rgba_decode(this.data.pixels[idxpix]);
-			image.data[idx]		= color.r;
-			image.data[idx+1]	= color.g;
-			image.data[idx+2]	= color.b;
-			image.data[idx+3]	= color.a;
+	/*
+		       _          _    __             _   
+		 _ __ (_)_  _____| |  / _| ___  _ __ | |_ 
+		| '_ \| \ \/ / _ \ | | |_ / _ \| '_ \| __|
+		| |_) | |>  <  __/ | |  _| (_) | | | | |_ 
+		| .__/|_/_/\_\___|_| |_|  \___/|_| |_|\__|
+		|_|                                       
+	*/
+	this.font = {
+		'null':	[[0,0,0],[0,0,0],[0,1,0],[0,0,0],[0,0,0]],
+		'0':	[[1,1,1],[1,0,1],[1,0,1],[1,0,1],[1,1,1]],
+		'1':	[[0,1,0],[0,1,0],[0,1,0],[0,1,0],[0,1,0]],
+		'2':	[[1,1,1],[0,0,1],[1,1,1],[1,0,0],[1,1,1]],
+		'3':	[[1,1,1],[0,0,1],[1,1,1],[0,0,1],[1,1,1]],
+		'4':	[[1,0,1],[1,0,1],[1,1,1],[0,0,1],[0,0,1]],
+		'5':	[[1,1,1],[1,0,0],[1,1,1],[0,0,1],[1,1,1]],
+		'6':	[[1,1,1],[1,0,0],[1,1,1],[1,0,1],[1,1,1]],
+		'7':	[[1,1,1],[0,0,1],[0,1,0],[0,1,0],[0,1,0]],
+		'8':	[[1,1,1],[1,0,1],[1,1,1],[1,0,1],[1,1,1]],
+		'9':	[[1,1,1],[1,0,1],[1,1,1],[0,0,1],[1,1,1]],
+		'%':	[[1,0,0],[0,0,1],[0,1,0],[1,0,0],[0,0,1]],
+		'.':	[[0,0,0],[0,0,0],[0,0,0],[0,0,0],[0,1,0]],
+		'.':	[[0,0,0],[0,0,0],[0,0,0],[0,0,0],[0,1,0]],
+		':':	[[0,0,0],[0,1,0],[0,0,0],[0,1,0],[0,0,0]],
+		'/':	[[0,0,0],[0,0,1],[0,1,0],[1,0,0],[0,0,0]],
+		' ':	[[0,0,0],[0,0,0],[0,0,0],[0,0,0],[0,0,0]],
+		'-':	[[0,0,0],[0,0,0],[1,1,1],[0,0,0],[0,0,0]],
+		'+':	[[0,0,0],[0,1,0],[1,1,1],[0,1,0],[0,0,0]],
+		'A':	[[1,1,1],[1,0,1],[1,1,1],[1,0,1],[1,0,1]],
+		'B':	[[1,1,1],[1,0,1],[1,1,0],[1,0,1],[1,1,1]],
+		'C':	[[1,1,1],[1,0,0],[1,0,0],[1,0,0],[1,1,1]],
+		'D':	[[1,1,1],[1,0,1],[1,0,1],[1,0,1],[1,1,1]],
+		'E':	[[1,1,1],[1,0,0],[1,1,1],[1,0,0],[1,1,1]],
+		'F':	[[1,1,1],[1,0,0],[1,1,1],[1,0,0],[1,0,0]],
+		'G':	[[1,1,1],[1,0,0],[1,1,1],[1,0,1],[1,1,1]],
+		'H':	[[1,0,1],[1,0,1],[1,1,1],[1,0,1],[1,0,1]],
+		'I':	[[1,1,1],[0,1,0],[0,1,0],[0,1,0],[1,1,1]],
+		'J':	[[0,0,1],[0,0,1],[0,0,1],[1,0,1],[1,1,1]],
+		'K':	[[1,0,1],[1,0,1],[1,1,0],[1,0,1],[1,0,1]],
+		'L':	[[1,0,0],[1,0,0],[1,0,0],[1,0,0],[1,1,1]],
+		'M':	[[1,0,1],[1,1,1],[1,0,1],[1,0,1],[1,0,1]],
+		'N':	[[1,1,1],[1,0,1],[1,0,1],[1,0,1],[1,0,1]],
+		'O':	[[1,1,1],[1,0,1],[1,0,1],[1,0,1],[1,1,1]],
+		'P':	[[1,1,1],[1,0,1],[1,1,1],[1,0,0],[1,0,0]],
+		'R':	[[1,1,1],[1,0,1],[1,1,1],[1,1,0],[1,0,1]],
+		'S':	[[1,1,1],[1,0,0],[1,1,1],[0,0,1],[1,1,1]],
+		'T':	[[1,1,1],[0,1,0],[0,1,0],[0,1,0],[0,1,0]],
+		'U':	[[1,0,1],[1,0,1],[1,0,1],[1,0,1],[1,1,1]],
+		'V':	[[1,0,1],[1,0,1],[1,0,1],[1,0,1],[0,1,0]],
+		'W':	[[1,0,1],[1,0,1],[1,0,1],[1,1,1],[1,0,1]],
+		'X':	[[1,0,1],[1,0,1],[0,1,0],[1,0,1],[1,0,1]],
+		'Y':	[[1,0,1],[1,0,1],[1,1,1],[0,1,0],[0,1,0]],
+		'Z':	[[1,1,1],[0,0,1],[0,1,0],[1,0,0],[1,1,1]],
+	};
+	
+	/*
+		  __ _ _ __ ___  _   _ _ __  ___ 
+		 / _` | '__/ _ \| | | | '_ \/ __|
+		| (_| | | | (_) | |_| | |_) \__ \
+		 \__, |_|  \___/ \__,_| .__/|___/
+		 |___/                |_|        
+	*/
+	
+	var group = function(type, position, margin) {
+		this.type	= type;
+		this.margin	= margin==undefined?1:margin;
+		this.x		= position.x;
+		this.y		= position.y;
+		this._x		= 0;
+		this._y		= scope.options.height;
+		this.width	= 0;
+		this.height	= 0;
+		this._width	= scope.options.width;
+		this._height= scope.options.height;
+		this.pixels	= new Uint32Array(this._width*this._height);
+	}
+	group.prototype.add = function(name, options) {
+		switch (name) {
+			case "vprogress":
+				this.rect(this._x, this._y, 5, 10, scope.color.progress.bg);
+				var _h = (options.value/10)^0;
+				this.rect(this._x, this._y+_h-10, 5, (options.value/10)^0, scope.color.progress.fg);
+				if (this.type=='horizontal') {
+					this._x		+= 5+this.margin;
+					this.width	+= 5+this.margin;
+					this.height	= Math.max(10, this.height);
+				} else {
+					this._y		-= 10+this.margin;
+					this.height	+= 10+this.margin;
+					this.width	= Math.max(5, this.width);
+				}
+			break;
+			case "hprogress":
+				this.rect(this._x, this._y-(options.y||0), 10, 5, scope.color.progress.bg);
+				this.rect(this._x, this._y-(options.y||0), (options.value/10)^0, 5, scope.color.progress.fg);
+				if (this.type=='horizontal') {
+					this._x		+= 10+this.margin;
+					this.width	+= 10+this.margin;
+					this.height	= Math.max(5, this.height);
+				} else {
+					this._y		-= 5+this.margin;
+					this.height	+= 5+this.margin;
+					this.width	= Math.max(10, this.width);
+				}
+			break;
+			case "text":
+				var posY	= this._y-options.y;
+				var text	= this.write(this._x+options.x||0, posY, options.text, scope.color.text, options.vertical);
+				if (this.type=='horizontal') {
+					this._x		+= (options.w?options.w:text.width)+this.margin;
+					this.width	+= (options.w?options.w:text.width)+this.margin;
+					this.height	= Math.max(10, text.height);
+				} else {
+					this._y		-= text.height+this.margin;
+					this.height	+= text.width+this.margin;
+					this.width	= Math.max(text.width, this.width);
+				}
+			break;
 		}
 	}
+	group.prototype.rect = function(x, y, w, h, color) {
+		x = Math.round(x);
+		y = Math.round(y);
+		var i,j;
+		for (i=y;i<y+h;i++) {
+			for (j=x;j<x+w;j++) {
+				scope.setPixel(this.x+j,i-h-this.y, color, true);
+			}
+		}
+	}
+	group.prototype.write = function(x, y, input, color, vertical) {
+		
+		parts = input.split('');
+		
+		var l = parts.length;
+		var i,j,xx,yy,dy;
+		var char, cursor;
+		cursor = {
+			x:	0,
+			y:	0
+		};
+		for (i=0;i<l;i++) {
+			if (!scope.font.hasOwnProperty(parts[i].toString().toUpperCase())) {
+				char	= scope.font['null'];
+			} else {
+				char	= scope.font[parts[i].toUpperCase()];
+			}
+			if (vertical) {
+				for (yy=0;yy<char.length;yy++) {
+					for (xx=0;xx<char[yy].length;xx++) {
+						if (char[yy][xx]==1) {
+							scope.setPixel(this.x+x+xx, y-this.y-yy+(l*6-cursor.y)- (l*6), color, true);
+						}
+					}
+				}
+				cursor.y += 6;
+			} else {
+				for (yy=0;yy<char.length;yy++) {
+					for (xx=0;xx<char[yy].length;xx++) {
+						if (char[yy][xx]==1) {
+							scope.setPixel(this.x+x+xx+cursor.x, y-this.y-yy, color, true);
+						}
+					}
+				}
+				cursor.x += 4;
+			}
+			
+		}
+		return {
+			width:	vertical?4:cursor.x,
+			height:	vertical?cursor.y:6
+		};
+		
+	}
 	
-	var writeStream = fs.createWriteStream(filename);
-	image.pack().pipe(writeStream);
-	writeStream.on('finish', function() {
-		callback(filename);
+	this.group = group;
+}
+
+signalChart.prototype.importAsset = function(name, x, y, callback) {
+	var scope = this;
+	scope.assets.load(name, function(png) {
+		var i,j, indexAsset, indexDest, xx, yy;
+		for (j=0;j<png.asset.h;j++) {
+			for (i=0;i<png.asset.w;i++) {
+				xx								= x+i-png.asset.x;
+				yy								= y+j-png.asset.y;
+				if (xx<0||xx>scope.options.width||yy<0||yy>scope.options.height) {continue;}
+				indexDest						= scope.index(xx, yy, scope.options.width);
+				indexAsset						= scope.index(i, png.asset.h-j, png.asset.w);
+				scope.setPixel(xx, yy, scope.rgba_decode(png.pixels[indexAsset]));
+			}
+		}
+		callback();
 	});
-	writeStream.on('error', function (err) {
-		toolset.error("toPNG()", err);
+}
+
+signalChart.prototype.location = function(name) {
+	var scope	= this;
+	var data	= this.getData(name);
+	return {
+		position:	function(pos, v) {
+			return {
+				x:	(scope.options.candleWidth*pos+scope.options.candleWidth/2)^0,
+				y:	scope.valueToY(data[pos][v])
+			};
+		}
+	}
+}
+
+signalChart.prototype.renderData = function(callback) {
+	var scope = this;
+	var loadStack = new toolset.stack();
+	_.each(this.importedAssets, function(asset) {
+		loadStack.add(function(p, cb) {
+			scope.importAsset(asset.name, asset.position.x, asset.position.y, cb);
+		});
+	});
+	loadStack.process(callback, true);
+}
+
+signalChart.prototype.toPNG = function(filename, callback) {
+	var scope = this;
+	
+	this.renderData(function() {
+		var image = new PNG({
+			width:	scope.options.width,
+			height:	scope.options.height
+		});
+		
+		// Now we convert the data
+		var x,y,idx,idxpix;
+		for (y = 0; y < scope.options.height; y++) {
+			for (x = 0; x < scope.options.width; x++) {
+				idx					= (scope.options.width * (scope.options.height-1-y) + x) << 2;
+				idxpix				= scope.index(x,y);
+				color				= scope.rgba_decode(scope.data.pixels[idxpix]);
+				image.data[idx]		= color.r;
+				image.data[idx+1]	= color.g;
+				image.data[idx+2]	= color.b;
+				image.data[idx+3]	= color.a;
+			}
+		}
+		
+		var writeStream = fs.createWriteStream(filename);
+		image.pack().pipe(writeStream);
+		writeStream.on('finish', function() {
+			callback(filename);
+		});
+		writeStream.on('error', function (err) {
+			toolset.error("toPNG()", err);
+		});
 	});
 }
 
@@ -689,45 +899,7 @@ signalChart.prototype.write = function(x, y, input, color, minHeight, vertical) 
 		y = minHeight;
 	}
 	
-	var font = {
-		'null':	[[0,0,0],[0,0,0],[0,1,0],[0,0,0],[0,0,0]],
-		'0':	[[1,1,1],[1,0,1],[1,0,1],[1,0,1],[1,1,1]],
-		'1':	[[0,1,0],[0,1,0],[0,1,0],[0,1,0],[0,1,0]],
-		'2':	[[1,1,1],[0,0,1],[1,1,1],[1,0,0],[1,1,1]],
-		'3':	[[1,1,1],[0,0,1],[1,1,1],[0,0,1],[1,1,1]],
-		'4':	[[1,0,1],[1,0,1],[1,1,1],[0,0,1],[0,0,1]],
-		'5':	[[1,1,1],[1,0,0],[1,1,1],[0,0,1],[1,1,1]],
-		'6':	[[1,1,1],[1,0,0],[1,1,1],[1,0,1],[1,1,1]],
-		'7':	[[1,1,1],[0,0,1],[0,1,0],[0,1,0],[0,1,0]],
-		'8':	[[1,1,1],[1,0,1],[1,1,1],[1,0,1],[1,1,1]],
-		'9':	[[1,1,1],[1,0,1],[1,1,1],[0,0,1],[1,1,1]],
-		'%':	[[1,0,0],[0,0,1],[0,1,0],[1,0,0],[0,0,1]],
-		'.':	[[0,0,0],[0,0,0],[0,0,0],[0,0,0],[0,1,0]],
-		'.':	[[0,0,0],[0,0,0],[0,0,0],[0,0,0],[0,1,0]],
-		':':	[[0,0,0],[0,1,0],[0,0,0],[0,1,0],[0,0,0]],
-		'/':	[[0,0,0],[0,0,1],[0,1,0],[1,0,0],[0,0,0]],
-		' ':	[[0,0,0],[0,0,0],[0,0,0],[0,0,0],[0,0,0]],
-		'-':	[[0,0,0],[0,0,0],[1,1,1],[0,0,0],[0,0,0]],
-		'+':	[[0,0,0],[0,1,0],[1,1,1],[0,1,0],[0,0,0]],
-		'A':	[[1,1,1],[1,0,1],[1,1,1],[1,0,1],[1,0,1]],
-		'B':	[[1,1,1],[1,0,1],[1,1,0],[1,0,1],[1,1,1]],
-		'C':	[[1,1,1],[1,0,0],[1,0,0],[1,0,0],[1,1,1]],
-		'D':	[[1,1,1],[1,0,1],[1,0,1],[1,0,1],[1,1,1]],
-		'E':	[[1,1,1],[1,0,0],[1,1,1],[1,0,0],[1,1,1]],
-		'F':	[[1,1,1],[1,0,0],[1,1,1],[1,0,0],[1,0,0]],
-		'G':	[[1,1,1],[1,0,0],[1,1,1],[1,0,1],[1,1,1]],
-		'H':	[[1,0,1],[1,0,0],[1,1,1],[1,0,1],[1,0,1]],
-		'I':	[[1,1,1],[0,1,0],[0,1,0],[0,1,0],[1,1,1]],
-		'J':	[[0,0,1],[0,0,1],[0,0,1],[1,0,1],[1,1,1]],
-		'K':	[[1,0,1],[1,0,1],[1,1,0],[1,0,1],[1,0,1]],
-		'N':	[[1,1,1],[1,0,1],[1,0,1],[1,0,1],[1,0,1]],
-		'U':	[[1,0,1],[1,0,1],[1,0,1],[1,0,1],[1,1,1]],
-		'R':	[[1,1,1],[1,0,1],[1,1,1],[1,1,0],[1,0,1]],
-		'S':	[[1,1,1],[1,0,0],[1,1,1],[0,0,1],[1,1,1]],
-		'P':	[[1,1,1],[1,0,1],[1,1,1],[1,0,0],[1,0,0]],
-		'Y':	[[1,0,1],[1,0,1],[1,1,1],[0,1,0],[0,1,0]],
-		'Z':	[[1,1,1],[0,0,1],[0,1,0],[1,0,0],[1,1,1]],
-	};
+	
 	
 	parts = input.split('');
 	
@@ -739,10 +911,10 @@ signalChart.prototype.write = function(x, y, input, color, minHeight, vertical) 
 		y:	0
 	};
 	for (i=0;i<l;i++) {
-		if (!font.hasOwnProperty(parts[i].toString())) {
-			char	= font['null'];
+		if (!this.font.hasOwnProperty(parts[i].toString())) {
+			char	= this.font['null'];
 		} else {
-			char	= font[parts[i]];
+			char	= this.font[parts[i]];
 		}
 		if (vertical) {
 			for (yy=0;yy<char.length;yy++) {
